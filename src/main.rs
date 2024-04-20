@@ -11,7 +11,12 @@ use process::process_csv;
 fn main() -> anyhow::Result<()> {
     let cli = Opts::parse();
     match cli.subcmd {
-        SubCommand::Csv(opts) => process_csv(&opts.input, &opts.output)?,
+        SubCommand::Csv(opts) => {
+            let output = opts
+                .output
+                .unwrap_or_else(|| format!("output.{}", opts.format));
+            process_csv(&opts.input, output, opts.format)?;
+        }
     }
     Ok(())
 }

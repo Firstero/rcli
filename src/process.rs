@@ -1,33 +1,26 @@
 use std::fs;
 
-use anyhow::Result;
 use csv::Reader;
-use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::opts::OutputFormat;
 
 //   Name          │      Position      │        DOB        │    Nationality     │ Kit Number │
-//  varchar        │      varchar       │      varchar      │      varchar       │   int64    |
+//  varchar        │      varchar       │      varchar      │      varchar       │  int64     |
 // 按照上述结构定义一个 Record 结构体
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct Player {
-    name: String,
-    position: String,
-    #[serde(rename = "DOB")]
-    dob: String,
-    nationality: String,
-    #[serde(rename = "Kit Number")]
-    kit: u8,
-}
-
-pub fn process_csv(input: &str, output: &str) -> Result<()> {
+pub fn process_csv(input: &str, output: String, output_format: OutputFormat) -> anyhow::Result<()> {
     let mut rdr = Reader::from_path(input)?;
     let mut ret = Vec::with_capacity(100);
-
-    for result in rdr.deserialize() {
-        let record: Player = result?;
-        ret.push(record)
+    let headers = rdr.headers()?.clone();
+    for result in rdr.records() {
+        let record = result?;
+        let json_value = headers.iter().zip(record.iter()).collect::<Value>();
+        ret.push(json_value)
     }
-    let json = serde_json::to_string_pretty(&ret)?;
-    fs::write(output, json)?;
+    let contents = match output_format {
+        OutputFormat::Json => serde_json::to_string_pretty(&ret)?,
+        OutputFormat::Yaml => serde_yaml::to_string(&ret)?,
+    };
+    fs::write(output, contents)?;
     Ok(())
 }
