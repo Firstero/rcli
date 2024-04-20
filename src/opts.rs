@@ -10,8 +10,12 @@ pub struct Opts {
 
 #[derive(Debug, Parser)]
 pub enum SubCommand {
+    // rcli csv --header xx -delimiter , -input /tmp/1.csv -output output.json
     #[command(name = "csv", about = "csv file processor")]
     Csv(CsvOpts),
+    // rcli genpass --upper xx --lower --symbol --number --length
+    #[command(name = "genpass", about = "generate password")]
+    Genpass(GenpassOpts),
 }
 
 #[derive(Debug, Parser)]
@@ -26,6 +30,20 @@ pub struct CsvOpts {
     pub output: Option<String>,
     #[arg(long, default_value = "json", value_parser=OutputFormat::from_str)]
     pub format: OutputFormat,
+}
+
+#[derive(Debug, Parser)]
+pub struct GenpassOpts {
+    #[arg(long, default_value_t = true)]
+    pub upper: bool,
+    #[arg(long, default_value_t = true)]
+    pub lower: bool,
+    #[arg(long, default_value_t = true)]
+    pub symbol: bool,
+    #[arg(long, default_value_t = true)]
+    pub number: bool,
+    #[arg(short, long, default_value_t = 16)]
+    pub length: u8,
 }
 
 #[derive(Debug, Clone, Copy)]
