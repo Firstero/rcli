@@ -1,4 +1,5 @@
 use rand::seq::SliceRandom;
+use zxcvbn::zxcvbn;
 
 const LOWER: &[u8] = b"abcdefghjkmnopqrstuvwxyz";
 const UPPER: &[u8] = b"ABCDEFGHIJKLMNPQRSTUVWXYZ";
@@ -39,5 +40,8 @@ pub fn process(
     password.shuffle(&mut rng);
     let password = String::from_utf8(password).expect("Unreachable: all bytes are valid utf8");
     println!("{}", password);
+    //use zxcvbn estimate password strength and outprint to stderr
+    let result = zxcvbn(&password, &[]).unwrap();
+    eprintln!("Estimated strength: {}", result.score());
     Ok(())
 }
