@@ -2,7 +2,7 @@ use std::fs;
 
 use csv::Reader;
 
-use crate::opts::OutputFormat;
+use crate::cli::OutputFormat;
 
 // 将 csv 文件转换为 json 或者 yaml 格式
 pub fn process(input: &str, output: String, output_format: OutputFormat) -> anyhow::Result<()> {
