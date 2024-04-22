@@ -1,5 +1,5 @@
+use anyhow::Result;
 use rand::seq::SliceRandom;
-use zxcvbn::zxcvbn;
 
 const LOWER: &[u8] = b"abcdefghjkmnopqrstuvwxyz";
 const UPPER: &[u8] = b"ABCDEFGHIJKLMNPQRSTUVWXYZ";
@@ -14,7 +14,7 @@ pub fn process(
     no_number: bool,
     no_symbol: bool,
     length: u8,
-) -> anyhow::Result<()> {
+) -> Result<String> {
     let mut rng = rand::thread_rng();
     let mut password = Vec::with_capacity(length as usize);
     let mut chars = Vec::new();
@@ -38,10 +38,5 @@ pub fn process(
         password.push(*chars.choose(&mut rng).unwrap());
     }
     password.shuffle(&mut rng);
-    let password = String::from_utf8(password).expect("Unreachable: all bytes are valid utf8");
-    println!("{}", password);
-    //use zxcvbn estimate password strength and outprint to stderr
-    let result = zxcvbn(&password, &[]).unwrap();
-    eprintln!("Estimated strength: {}", result.score());
-    Ok(())
+    Ok(String::from_utf8(password)?)
 }

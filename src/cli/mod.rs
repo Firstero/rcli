@@ -1,12 +1,14 @@
 mod base64_opts;
 mod csv_opts;
 mod genpass_opts;
+mod text;
 
 use std::fs;
 
 pub use self::base64_opts::{Base64Format, Base64Opts, Base64SubCommand};
 pub use self::csv_opts::{CsvOpts, OutputFormat};
 pub use self::genpass_opts::GenpassOpts;
+pub use self::text::{TextOpts, TextSignFormat, TextSubCommand};
 use clap::Parser;
 
 #[derive(Debug, Parser)]
@@ -27,6 +29,8 @@ pub enum SubCommand {
     // rcli base64 --encode/decode --output
     #[command(name = "base64", about = "base64 encode/decode")]
     Base64(Base64Opts),
+    #[command(name = "text", about = "text sign/verify")]
+    Text(TextOpts),
 }
 
 // 模块级别的函数，共享input file的解析逻辑

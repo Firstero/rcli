@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::fs;
 
 use csv::Reader;
@@ -5,7 +6,7 @@ use csv::Reader;
 use crate::cli::OutputFormat;
 
 // 将 csv 文件转换为 json 或者 yaml 格式
-pub fn process(input: &str, output: String, output_format: OutputFormat) -> anyhow::Result<()> {
+pub fn process(input: &str, output: String, output_format: OutputFormat) -> Result<()> {
     let mut rdr = Reader::from_path(input)?;
     let mut ret = Vec::with_capacity(100);
     let headers = rdr.headers()?.clone();

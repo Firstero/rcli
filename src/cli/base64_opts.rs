@@ -18,7 +18,7 @@ pub enum Base64SubCommand {
 
 #[derive(Debug, Parser)]
 pub struct Base64EncodeOpts {
-    #[arg(short, long, value_parser=parse_input_file, required = true, help = "input file path, or '-' for stdin")]
+    #[arg(short, long, value_parser=parse_input_file, default_value="-", help = "input file path, or '-' for stdin")]
     pub input: String,
     #[arg(long, default_value = "standard", value_parser=Base64Format::from_str, help = "base64 format: [standard, urlsafe, nopadding]")]
     pub format: Base64Format,
@@ -26,7 +26,7 @@ pub struct Base64EncodeOpts {
 
 #[derive(Debug, Parser)]
 pub struct Base64DecodeOpts {
-    #[arg(short, long, value_parser=parse_input_file, help = "input file path, or '-' for stdin")]
+    #[arg(short, long, value_parser=parse_input_file, default_value="-", help = "input file path, or '-' for stdin")]
     pub input: String,
     #[arg(long, value_parser=Base64Format::from_str, default_value = "standard", help = "base64 format: [standard, urlsafe, nopadding]")]
     pub format: Base64Format,
