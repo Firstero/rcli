@@ -20,7 +20,7 @@ pub enum TextSubCommand {
 pub struct TextSignOpts {
     #[arg(short, long, value_parser=parse_input_file, default_value="-", help = "input file path, or '-' for stdin")]
     pub input: String,
-    #[arg(long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
+    #[arg(short, long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
     pub key: String,
     #[arg(long, value_parser=TextSignFormat::from_str, default_value="blake3", help = "key file path, or '-' for stdin")]
     pub format: TextSignFormat,
@@ -34,6 +34,8 @@ pub struct TextVerifyOpts {
     pub key: String,
     #[arg(short, long, required = true, help = "signature")]
     pub sig: String,
+    #[arg(long, value_parser=TextSignFormat::from_str, default_value="blake3", help = "key file path, or '-' for stdin")]
+    pub format: TextSignFormat,
 }
 
 #[derive(Debug, Clone, Copy)]

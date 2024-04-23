@@ -1,10 +1,11 @@
 use anyhow::Result;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use zxcvbn::zxcvbn;
 
 use rcli::{
-    process_b64decode, process_b64encode, process_csv, process_genpass, Base64SubCommand, Opts,
-    SubCommand, TextSubCommand,
+    process_b64decode, process_b64encode, process_csv, process_genpass, process_sign,
+    process_verify, Base64SubCommand, Opts, SubCommand, TextSubCommand,
 };
 
 // usage:
@@ -30,13 +31,13 @@ fn main() -> Result<()> {
                 opts.length,
             )?;
             println!("{}", ret);
-            let estimate = zxcvbn(&ret, &[]).unwrap();
-            eprintln!("estimate: {:?}", estimate);
+            let estimate = zxcvbn(&ret, &[])?;
+            eprintln!("estimate: {:?}", estimate.score());
         }
         SubCommand::Base64(base64_opts) => match base64_opts.subcmd {
             Base64SubCommand::Encode(opts) => {
                 let ret = process_b64encode(&opts.input, opts.format)?;
-                print!("{}", ret);
+                println!("{}", ret);
             }
             Base64SubCommand::Decode(opts) => {
                 let ret = process_b64decode(&opts.input, opts.format)?;
@@ -46,10 +47,17 @@ fn main() -> Result<()> {
         // Todo: implement text subcommand
         SubCommand::Text(text_opts) => match text_opts.subcmd {
             TextSubCommand::Sign(opts) => {
-                println!("sign: {:?}", opts);
+                let signed = process_sign(&opts.input, &opts.key, opts.format)?;
+                let encode = URL_SAFE_NO_PAD.encode(signed);
+                println!("{}", encode);
             }
             TextSubCommand::Verify(opts) => {
-                println!("verify: {:?}", opts);
+                let verified = process_verify(&opts.input, &opts.key, &opts.sig, opts.format)?;
+                if verified {
+                    println!("✓ Signature verified");
+                } else {
+                    println!("⚠ Signature not verified");
+                }
             }
         },
     }
