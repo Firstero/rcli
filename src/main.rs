@@ -4,8 +4,8 @@ use clap::Parser;
 use zxcvbn::zxcvbn;
 
 use rcli::{
-    process_b64decode, process_b64encode, process_csv, process_genpass, process_sign,
-    process_verify, Base64SubCommand, Opts, SubCommand, TextSubCommand,
+    get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_genpass,
+    process_sign, process_verify, Base64SubCommand, Opts, SubCommand, TextSubCommand,
 };
 
 // usage:
@@ -29,8 +29,9 @@ fn main() -> Result<()> {
                 opts.no_number,
                 opts.no_symbol,
                 opts.length,
-            )?;
-            println!("{}", ret);
+            );
+            let ret = String::from_utf8(ret)?;
+            println!("{:?}", ret);
             let estimate = zxcvbn(&ret, &[])?;
             eprintln!("estimate: {:?}", estimate.score());
         }
@@ -47,12 +48,17 @@ fn main() -> Result<()> {
         // Todo: implement text subcommand
         SubCommand::Text(text_opts) => match text_opts.subcmd {
             TextSubCommand::Sign(opts) => {
-                let signed = process_sign(&opts.input, &opts.key, opts.format)?;
+                let mut reader = get_reader(&opts.input)?;
+                let key = get_content(&opts.key)?;
+                let signed = process_sign(&mut reader, &key, opts.format)?;
                 let encode = URL_SAFE_NO_PAD.encode(signed);
                 println!("{}", encode);
             }
             TextSubCommand::Verify(opts) => {
-                let verified = process_verify(&opts.input, &opts.key, &opts.sig, opts.format)?;
+                let mut reader = get_reader(&opts.input)?;
+                let key = get_content(&opts.key)?;
+                let sig = URL_SAFE_NO_PAD.decode(&opts.sig)?;
+                let verified = process_verify(&mut reader, &key, &sig, opts.format)?;
                 if verified {
                     println!("✓ Signature verified");
                 } else {

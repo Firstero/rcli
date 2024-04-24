@@ -8,3 +8,10 @@ pub fn get_reader(input: &str) -> Result<Box<dyn Read>> {
         path => Ok(Box::new(std::fs::File::open(path)?)),
     }
 }
+
+pub fn get_content(input: &str) -> Result<Vec<u8>> {
+    let mut reader = get_reader(input)?;
+    let mut content = Vec::new();
+    reader.read_to_end(&mut content)?;
+    Ok(content)
+}
