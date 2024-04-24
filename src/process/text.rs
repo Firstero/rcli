@@ -1,6 +1,8 @@
 use crate::TextSignFormat;
 use anyhow::anyhow;
 use anyhow::Result;
+use ed25519::signature::{Signer, Verifier};
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
 use std::io::Read;
 
 trait TextSign {
@@ -8,7 +10,7 @@ trait TextSign {
 }
 
 trait TextVerify {
-    fn verify(&self, reader: impl Read, sig: &[u8]) -> Result<bool>;
+    fn verify(&self, reader: &mut dyn Read, sig: &[u8]) -> Result<bool>;
 }
 
 struct Blake3 {
@@ -30,14 +32,6 @@ impl Blake3 {
     }
 }
 
-// struct Ed25519Signer {
-//     key: [u8; 32],
-// }
-
-// struct Ed25519Verifier {
-//     key: [u8; 32],
-// }
-
 impl TextSign for Blake3 {
     fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
         // TODO: improve perf by reading in chunks
@@ -49,7 +43,7 @@ impl TextSign for Blake3 {
 }
 
 impl TextVerify for Blake3 {
-    fn verify(&self, mut reader: impl Read, sig: &[u8]) -> Result<bool> {
+    fn verify(&self, reader: &mut dyn Read, sig: &[u8]) -> Result<bool> {
         let mut data = Vec::new();
         reader.read_to_end(&mut data)?;
         let hash = blake3::keyed_hash(&self.key, &data);
@@ -57,11 +51,61 @@ impl TextVerify for Blake3 {
     }
 }
 
+struct Ed25519Signer {
+    key: SigningKey,
+}
+
+impl Ed25519Signer {
+    pub fn new(key: SigningKey) -> Self {
+        Self { key }
+    }
+
+    pub fn try_new(key: impl AsRef<[u8]>) -> Result<Self> {
+        let key = key.as_ref();
+        let key = SigningKey::from_bytes(key.try_into()?);
+        Ok(Self::new(key))
+    }
+}
+
+impl TextSign for Ed25519Signer {
+    fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+        let sig = self.key.sign(&data);
+        Ok(sig.to_bytes().to_vec())
+    }
+}
+
+struct Ed25519Verifier {
+    key: VerifyingKey,
+}
+
+impl Ed25519Verifier {
+    pub fn new(key: VerifyingKey) -> Self {
+        Self { key }
+    }
+
+    pub fn try_new(key: impl AsRef<[u8]>) -> Result<Self> {
+        let key = key.as_ref();
+        VerifyingKey::from_bytes(key.try_into()?)
+            .map_or_else(|_| Err(anyhow!("invalid key")), |key| Ok(Self::new(key)))
+    }
+}
+
+impl TextVerify for Ed25519Verifier {
+    fn verify(&self, reader: &mut dyn Read, sig: &[u8]) -> Result<bool> {
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+        let sig = Signature::from_slice(sig).map_err(|_| anyhow!("invalid signature"))?;
+        let ret = self.key.verify(&data, &sig).is_ok();
+        Ok(ret)
+    }
+}
 /// 根据format 调用不同的signer, 依据种子key对输入文本进行签名
 pub fn process_sign(reader: &mut dyn Read, key: &[u8], format: TextSignFormat) -> Result<Vec<u8>> {
-    let signer = match format {
-        TextSignFormat::Blake3 => Blake3::try_new(key)?,
-        TextSignFormat::Ed25519 => todo!(),
+    let signer: Box<dyn TextSign> = match format {
+        TextSignFormat::Blake3 => Box::new(Blake3::try_new(key)?),
+        TextSignFormat::Ed25519 => Box::new(Ed25519Signer::try_new(key)?),
     };
     signer.sign(reader)
 }
@@ -73,9 +117,10 @@ pub fn process_verify(
     format: TextSignFormat,
 ) -> Result<bool> {
     // 读取所有的数据
-    let verifier = match format {
-        TextSignFormat::Blake3 => Blake3::try_new(key)?,
-        TextSignFormat::Ed25519 => todo!(),
+    // 修改下列错误
+    let verifier: Box<dyn TextVerify> = match format {
+        TextSignFormat::Blake3 => Box::new(Blake3::try_new(key)?),
+        TextSignFormat::Ed25519 => Box::new(Ed25519Verifier::try_new(key)?),
     };
     verifier.verify(reader, sig)
 }
