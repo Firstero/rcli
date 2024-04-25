@@ -4,6 +4,7 @@ mod genpass_opts;
 mod text;
 
 use std::fs;
+use std::path::{Path, PathBuf};
 
 pub use self::base64_opts::{Base64Format, Base64Opts, Base64SubCommand};
 pub use self::csv_opts::{CsvOpts, OutputFormat};
@@ -34,11 +35,20 @@ pub enum SubCommand {
 }
 
 // 模块级别的函数，共享input file的解析逻辑
-fn parse_input_file(path: &str) -> Result<String, String> {
+pub fn parse_input_file(path: &str) -> Result<String, String> {
     if path == "-" || fs::metadata(path).is_ok() {
         Ok(path.to_string())
     } else {
         Err(format!("file not found: {}", path))
+    }
+}
+
+pub fn verify_dir(path: &str) -> Result<PathBuf, &'static str> {
+    let path = Path::new(path);
+    if path.exists() && path.is_dir() {
+        Ok(path.into())
+    } else {
+        Err("directory not found")
     }
 }
 

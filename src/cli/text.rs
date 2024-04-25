@@ -1,7 +1,7 @@
 use clap::Parser;
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, path::PathBuf, str::FromStr};
 
-use super::parse_input_file;
+use super::{parse_input_file, verify_dir};
 #[derive(Debug, Parser)]
 pub struct TextOpts {
     #[command(subcommand)]
@@ -14,6 +14,16 @@ pub enum TextSubCommand {
     Sign(TextSignOpts),
     #[command(name = "verify", about = "Verify text with public/shared key.")]
     Verify(TextVerifyOpts),
+    #[command(name = "generate", about = "Generate random key.")]
+    Generate(TextKeyGenerateOpts),
+}
+
+#[derive(Debug, Parser)]
+pub struct TextKeyGenerateOpts {
+    #[arg(long, value_parser=TextSignFormat::from_str, default_value="blake3", help = "key file path, or '-' for stdin")]
+    pub format: TextSignFormat,
+    #[arg(short, long,  value_parser=verify_dir)]
+    pub output: PathBuf,
 }
 
 #[derive(Debug, Parser)]

@@ -1,11 +1,14 @@
+use std::fs;
+
 use anyhow::Result;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use zxcvbn::zxcvbn;
 
 use rcli::{
-    get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_genpass,
-    process_sign, process_verify, Base64SubCommand, Opts, SubCommand, TextSubCommand,
+    get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_generate,
+    process_genpass, process_sign, process_verify, Base64SubCommand, Opts, SubCommand,
+    TextSignFormat, TextSubCommand,
 };
 
 // usage:
@@ -58,11 +61,26 @@ fn main() -> Result<()> {
                 let mut reader = get_reader(&opts.input)?;
                 let key = get_content(&opts.key)?;
                 let sig = URL_SAFE_NO_PAD.decode(&opts.sig)?;
+                println!("sig: {:?}", sig.len());
                 let verified = process_verify(&mut reader, &key, &sig, opts.format)?;
                 if verified {
                     println!("✓ Signature verified");
                 } else {
                     println!("⚠ Signature not verified");
+                }
+            }
+            TextSubCommand::Generate(opts) => {
+                let keys = process_generate(opts.format)?;
+                match opts.format {
+                    TextSignFormat::Blake3 => {
+                        let name = opts.output.join("blake3.key");
+                        let keys = process_generate(opts.format)?;
+                        fs::write(name, &keys[0])?;
+                    }
+                    TextSignFormat::Ed25519 => {
+                        fs::write(opts.output.join("ed25519.sk"), &keys[0])?;
+                        fs::write(opts.output.join("ed25519.pk"), &keys[1])?;
+                    }
                 }
             }
         },

@@ -1,9 +1,12 @@
+use crate::process_genpass;
 use crate::TextSignFormat;
 use anyhow::anyhow;
 use anyhow::Result;
 use ed25519::signature::{Signer, Verifier};
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
+use rand::rngs::OsRng;
 use std::io::Read;
+use std::vec;
 
 trait TextSign {
     fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
@@ -11,6 +14,10 @@ trait TextSign {
 
 trait TextVerify {
     fn verify(&self, reader: &mut dyn Read, sig: &[u8]) -> Result<bool>;
+}
+
+trait KeyGenerator {
+    fn generate() -> Result<Vec<Vec<u8>>>;
 }
 
 struct Blake3 {
@@ -39,6 +46,14 @@ impl TextSign for Blake3 {
         reader.read_to_end(&mut data)?;
         let hash = blake3::keyed_hash(&self.key, &data);
         Ok(hash.as_bytes().to_vec())
+    }
+}
+
+impl KeyGenerator for Blake3 {
+    fn generate() -> Result<Vec<Vec<u8>>> {
+        let ret = process_genpass(false, false, false, false, 32);
+        println!("{:?}", ret);
+        Ok(vec![ret])
     }
 }
 
@@ -73,6 +88,18 @@ impl TextSign for Ed25519Signer {
         reader.read_to_end(&mut data)?;
         let sig = self.key.sign(&data);
         Ok(sig.to_bytes().to_vec())
+    }
+}
+
+impl KeyGenerator for Ed25519Signer {
+    fn generate() -> Result<Vec<Vec<u8>>> {
+        let mut rng = OsRng;
+        let signing_key = SigningKey::generate(&mut rng);
+        let verifying_key = VerifyingKey::from(&signing_key);
+        Ok(vec![
+            signing_key.as_bytes().to_vec(),
+            verifying_key.as_bytes().to_vec(),
+        ])
     }
 }
 
@@ -123,6 +150,13 @@ pub fn process_verify(
         TextSignFormat::Ed25519 => Box::new(Ed25519Verifier::try_new(key)?),
     };
     verifier.verify(reader, sig)
+}
+
+pub fn process_generate(format: TextSignFormat) -> Result<Vec<Vec<u8>>> {
+    match format {
+        TextSignFormat::Blake3 => Blake3::generate(),
+        TextSignFormat::Ed25519 => Ed25519Signer::generate(),
+    }
 }
 
 // 生成测试用例
