@@ -6,7 +6,7 @@ pub use cli::{
     TextSubCommand,
 };
 pub use process::{
-    process_b64decode, process_b64encode, process_csv, process_generate, process_genpass,
-    process_sign, process_verify,
+    process_b64decode, process_b64encode, process_csv, process_decrypt, process_encrypt,
+    process_generate, process_genpass, process_sign, process_verify,
 };
 pub use utils::{get_content, get_reader};

@@ -1,14 +1,13 @@
-use std::fs;
-
 use anyhow::Result;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, read::DecoderReader, Engine};
 use clap::Parser;
+use std::fs;
 use zxcvbn::zxcvbn;
 
 use rcli::{
-    get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_generate,
-    process_genpass, process_sign, process_verify, Base64SubCommand, Opts, SubCommand,
-    TextSignFormat, TextSubCommand,
+    get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_decrypt,
+    process_encrypt, process_generate, process_genpass, process_sign, process_verify,
+    Base64SubCommand, Opts, SubCommand, TextSignFormat, TextSubCommand,
 };
 
 // usage:
@@ -82,6 +81,22 @@ fn main() -> Result<()> {
                         fs::write(opts.output.join("ed25519.pk"), &keys[1])?;
                     }
                 }
+            }
+            TextSubCommand::Encrypt(opts) => {
+                let mut reader = get_reader(&opts.input)?;
+                let key = get_content(&opts.key)?;
+                let nonce = get_content(&opts.nonce)?;
+                let encrypted = process_encrypt(&mut reader, &key, &nonce)?;
+                println!("{}", URL_SAFE_NO_PAD.encode(encrypted));
+            }
+            TextSubCommand::Decrypt(opts) => {
+                let reader = get_reader(&opts.input)?;
+                let mut reader = DecoderReader::new(reader, &URL_SAFE_NO_PAD);
+                // 创建一个新的 reader，应用 URL_SAFE_NO_PAD 解码
+                let key = get_content(&opts.key)?;
+                let nonce = get_content(&opts.nonce)?;
+                let decrypted = process_decrypt(&mut reader, &key, &nonce)?;
+                println!("{}", String::from_utf8(decrypted)?);
             }
         },
     }

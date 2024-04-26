@@ -1,13 +1,15 @@
 use crate::process_genpass;
 use crate::TextSignFormat;
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use chacha20poly1305::aead::generic_array::GenericArray;
+use chacha20poly1305::{
+    aead::{Aead, AeadCore, KeyInit, OsRng},
+    ChaCha20Poly1305, Nonce,
+};
 use ed25519::signature::{Signer, Verifier};
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
-use rand::rngs::OsRng;
 use std::io::Read;
 use std::vec;
-
 trait TextSign {
     fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
 }
@@ -18,6 +20,14 @@ trait TextVerify {
 
 trait KeyGenerator {
     fn generate() -> Result<Vec<Vec<u8>>>;
+}
+
+trait Encrypt {
+    fn encrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
+}
+
+trait Decrypt {
+    fn decrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
 }
 
 struct Blake3 {
@@ -52,7 +62,6 @@ impl TextSign for Blake3 {
 impl KeyGenerator for Blake3 {
     fn generate() -> Result<Vec<Vec<u8>>> {
         let ret = process_genpass(false, false, false, false, 32);
-        println!("{:?}", ret);
         Ok(vec![ret])
     }
 }
@@ -93,7 +102,7 @@ impl TextSign for Ed25519Signer {
 
 impl KeyGenerator for Ed25519Signer {
     fn generate() -> Result<Vec<Vec<u8>>> {
-        let mut rng = OsRng;
+        let mut rng = rand::rngs::OsRng;
         let signing_key = SigningKey::generate(&mut rng);
         let verifying_key = VerifyingKey::from(&signing_key);
         Ok(vec![
@@ -128,6 +137,59 @@ impl TextVerify for Ed25519Verifier {
         Ok(ret)
     }
 }
+
+struct ChaCha20Poly1305cryptor {
+    nonce: Nonce,
+    cipher: ChaCha20Poly1305,
+}
+
+impl ChaCha20Poly1305cryptor {
+    pub fn new(key: &[u8], nonce: Nonce) -> Self {
+        Self {
+            cipher: ChaCha20Poly1305::new(key.into()),
+            nonce,
+        }
+    }
+
+    pub fn try_new(key: impl AsRef<[u8]>, nonce: impl AsRef<[u8]>) -> Result<Self> {
+        let key = key.as_ref();
+        let nonce = Nonce::from_slice(nonce.as_ref());
+        Ok(Self::new(key, *nonce))
+    }
+}
+
+impl KeyGenerator for ChaCha20Poly1305cryptor {
+    fn generate() -> Result<Vec<Vec<u8>>> {
+        let key = ChaCha20Poly1305::generate_key(&mut OsRng);
+        let nonce: GenericArray<u8, _> = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+        Ok(vec![key.to_vec(), nonce.to_vec()])
+    }
+}
+
+impl Encrypt for ChaCha20Poly1305cryptor {
+    fn encrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+        let ciphertext = self
+            .cipher
+            .encrypt(&self.nonce, data.as_ref())
+            .map_err(|v| anyhow!(format!("encrypt error, {}", v)))?;
+        Ok(ciphertext)
+    }
+}
+
+impl Decrypt for ChaCha20Poly1305cryptor {
+    fn decrypt(&self, reader: &mut dyn Read) -> Result<Vec<u8>> {
+        let mut data = Vec::new();
+        reader.read_to_end(&mut data)?;
+        let plaintext = self
+            .cipher
+            .decrypt(&self.nonce, data.as_ref())
+            .map_err(|v| anyhow!(format!("decrypt error, {}", v)))?;
+        Ok(plaintext)
+    }
+}
+
 /// 根据format 调用不同的signer, 依据种子key对输入文本进行签名
 pub fn process_sign(reader: &mut dyn Read, key: &[u8], format: TextSignFormat) -> Result<Vec<u8>> {
     let signer: Box<dyn TextSign> = match format {
@@ -159,6 +221,18 @@ pub fn process_generate(format: TextSignFormat) -> Result<Vec<Vec<u8>>> {
     }
 }
 
+// 加密
+pub fn process_encrypt(reader: &mut dyn Read, key: &[u8], nonce: &[u8]) -> Result<Vec<u8>> {
+    let encrpytor = ChaCha20Poly1305cryptor::try_new(key, nonce)?;
+    encrpytor.encrypt(reader)
+}
+
+// 解密
+pub fn process_decrypt(reader: &mut dyn Read, key: &[u8], nonce: &[u8]) -> Result<Vec<u8>> {
+    let decrypter = ChaCha20Poly1305cryptor::try_new(key, nonce)?;
+    decrypter.decrypt(reader)
+}
+
 // 生成测试用例
 #[cfg(test)]
 mod tests {
@@ -186,6 +260,17 @@ mod tests {
             TextSignFormat::Blake3,
         );
         assert!(ret.is_ok());
+        Ok(())
+    }
+
+    // 使用 fiturex/chacha20poly1305.key 和 fiturex/chacha20poly1305.nonce 测试 chacha20poly1305Encryptor
+    #[test]
+    fn test_process_encrypt() -> Result<()> {
+        let key: &[u8] = include_bytes!("../../fixtures/chacha20poly1305.key");
+        let nonce: &[u8] = include_bytes!("../../fixtures/chacha20poly1305.nonce");
+        let encrypted = process_encrypt(&mut "hello,world!".as_bytes(), key, nonce)?;
+        let decrypted = process_decrypt(&mut encrypted.as_slice(), key, nonce)?;
+        assert_eq!("hello,world!".as_bytes(), decrypted);
         Ok(())
     }
 }

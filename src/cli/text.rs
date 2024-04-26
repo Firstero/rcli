@@ -16,6 +16,10 @@ pub enum TextSubCommand {
     Verify(TextVerifyOpts),
     #[command(name = "generate", about = "Generate random key.")]
     Generate(TextKeyGenerateOpts),
+    #[command(name = "encrypt", about = "Encrypt text with public key.")]
+    Encrypt(TextEncryptOpts),
+    #[command(name = "decrypt", about = "Decrypt text with private key.")]
+    Decrypt(TextDecryptOpts),
 }
 
 #[derive(Debug, Parser)]
@@ -46,6 +50,26 @@ pub struct TextVerifyOpts {
     pub sig: String,
     #[arg(long, value_parser=TextSignFormat::from_str, default_value="blake3", help = "key file path, or '-' for stdin")]
     pub format: TextSignFormat,
+}
+
+#[derive(Debug, Parser)]
+pub struct TextEncryptOpts {
+    #[arg(short, long, value_parser=parse_input_file, default_value="-", help = "input file path, or '-' for stdin")]
+    pub input: String,
+    #[arg(short, long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
+    pub key: String,
+    #[arg(short, long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
+    pub nonce: String,
+}
+
+#[derive(Debug, Parser)]
+pub struct TextDecryptOpts {
+    #[arg(short, long, value_parser=parse_input_file, default_value="-", help = "input file path, or '-' for stdin")]
+    pub input: String,
+    #[arg(short, long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
+    pub key: String,
+    #[arg(short, long, value_parser=parse_input_file, help = "key file path, or '-' for stdin")]
+    pub nonce: String,
 }
 
 #[derive(Debug, Clone, Copy)]
