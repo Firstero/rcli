@@ -1,6 +1,7 @@
 mod base64_opts;
 mod csv_opts;
 mod genpass_opts;
+mod http_serve;
 mod text;
 
 use std::fs;
@@ -9,6 +10,7 @@ use std::path::{Path, PathBuf};
 pub use self::base64_opts::{Base64Format, Base64Opts, Base64SubCommand};
 pub use self::csv_opts::{CsvOpts, OutputFormat};
 pub use self::genpass_opts::GenpassOpts;
+pub use self::http_serve::{HttpOpts, HttpSubCommand};
 pub use self::text::{TextOpts, TextSignFormat, TextSubCommand};
 use clap::Parser;
 
@@ -30,8 +32,12 @@ pub enum SubCommand {
     // rcli base64 --encode/decode --output
     #[command(name = "base64", about = "base64 encode/decode")]
     Base64(Base64Opts),
+    // rcli text sign/verify --input --key --format
     #[command(name = "text", about = "text sign/verify")]
     Text(TextOpts),
+    // rcli http serve . --port 8080
+    #[command(name = "http", about = "http server")]
+    HttpServe(HttpOpts),
 }
 
 // 模块级别的函数，共享input file的解析逻辑

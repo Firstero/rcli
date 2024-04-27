@@ -81,3 +81,15 @@ cargo nextest 是一个 Rust 增强测试工具。
 ```bash
 cargo install cargo-nextest --locked
 ```
+
+
+
+### 1.12 Http 文件服务器
+- 简要了解 Rust 处理 web 相关的库:
+  - tokio
+  - hyper, reqwest, axum
+  - tower, tower-http
+- 构建 CLI
+  rcli http serve -d . => serve 当前目录的文件
+- 使用 axum 构建一个简单的 web 服务器
+- 使用 axum 和 tokio fs

@@ -6,8 +6,9 @@ use zxcvbn::zxcvbn;
 
 use rcli::{
     get_content, get_reader, process_b64decode, process_b64encode, process_csv, process_decrypt,
-    process_encrypt, process_generate, process_genpass, process_sign, process_verify,
-    Base64SubCommand, Opts, SubCommand, TextSignFormat, TextSubCommand,
+    process_encrypt, process_generate, process_genpass, process_http_serve, process_sign,
+    process_verify, Base64SubCommand, HttpSubCommand, Opts, SubCommand, TextSignFormat,
+    TextSubCommand,
 };
 
 // usage:
@@ -15,7 +16,9 @@ use rcli::{
 // 使用 rcli -- genpass -l --no-lower --no-lower --no-symbol 进行密码生成
 // 使用 rcli -- base64 --encode/--decode --format nopadding/urlsafe/standard 进行base64编码/解码
 // 使用 rcli -- text --sign/--verify --format blake3/ed25519 进行文本签名/验证
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt::init();
     let cli = Opts::parse();
     match cli.subcmd {
         SubCommand::Csv(opts) => {
@@ -97,6 +100,11 @@ fn main() -> Result<()> {
                 let nonce = get_content(&opts.nonce)?;
                 let decrypted = process_decrypt(&mut reader, &key, &nonce)?;
                 println!("{}", String::from_utf8(decrypted)?);
+            }
+        },
+        SubCommand::HttpServe(opts) => match opts.subcmd {
+            HttpSubCommand::Serve(serve_opts) => {
+                process_http_serve(serve_opts.dir, serve_opts.port).await?;
             }
         },
     }
