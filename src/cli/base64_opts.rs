@@ -1,7 +1,8 @@
+use anyhow::Result;
 use clap::Parser;
 use std::{fmt::Display, str::FromStr};
 
-use super::parse_input_file;
+use crate::{parse_input_file, process_b64decode, process_b64encode, CmdExcutor};
 #[derive(Debug, Parser)]
 pub struct Base64Opts {
     #[command(subcommand)]
@@ -65,5 +66,30 @@ impl From<Base64Format> for &'static str {
 impl Display for Base64Format {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", Into::<&str>::into(*self))
+    }
+}
+
+impl CmdExcutor for Base64EncodeOpts {
+    async fn execute(self) -> Result<()> {
+        let ret = process_b64encode(&self.input, self.format)?;
+        println!("{}", ret);
+        Ok(())
+    }
+}
+
+impl CmdExcutor for Base64DecodeOpts {
+    async fn execute(self) -> Result<()> {
+        let ret = process_b64decode(&self.input, self.format)?;
+        println!("{}", ret);
+        Ok(())
+    }
+}
+
+impl CmdExcutor for Base64Opts {
+    async fn execute(self) -> Result<()> {
+        match self.subcmd {
+            Base64SubCommand::Encode(opts) => opts.execute().await,
+            Base64SubCommand::Decode(opts) => opts.execute().await,
+        }
     }
 }

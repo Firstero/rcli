@@ -93,3 +93,11 @@ cargo install cargo-nextest --locked
   rcli http serve -d . => serve 当前目录的文件
 - 使用 axum 构建一个简单的 web 服务器
 - 使用 axum 和 tokio fs
+
+### 1.13 tower-http service
+- 简要了解 tower-http
+- 使用 tower-http ServeDir service
+- 集成 ServeDir service 至 axum
+
+
+### 1.14 重构 CLI

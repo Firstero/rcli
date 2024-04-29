@@ -1,4 +1,6 @@
-use super::parse_input_file;
+use crate::{parse_input_file, process_csv, CmdExcutor};
+
+use anyhow::Result;
 use clap::Parser;
 use std::{fmt::Display, str::FromStr};
 
@@ -46,5 +48,14 @@ impl From<OutputFormat> for &'static str {
 impl Display for OutputFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", Into::<&str>::into(*self))
+    }
+}
+
+impl CmdExcutor for CsvOpts {
+    async fn execute(self) -> Result<()> {
+        let output = self
+            .output
+            .unwrap_or_else(|| format!("output.{}", self.format));
+        process_csv(&self.input, output, self.format)
     }
 }

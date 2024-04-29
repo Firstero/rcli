@@ -4,14 +4,18 @@ mod genpass_opts;
 mod http_serve;
 mod text;
 
+use anyhow::Result;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use crate::CmdExcutor;
 
 pub use self::base64_opts::{Base64Format, Base64Opts, Base64SubCommand};
 pub use self::csv_opts::{CsvOpts, OutputFormat};
 pub use self::genpass_opts::GenpassOpts;
 pub use self::http_serve::{HttpOpts, HttpSubCommand};
 pub use self::text::{TextOpts, TextSignFormat, TextSubCommand};
+
 use clap::Parser;
 
 #[derive(Debug, Parser)]
@@ -55,6 +59,18 @@ pub fn verify_dir(path: &str) -> Result<PathBuf, &'static str> {
         Ok(path.into())
     } else {
         Err("directory not found")
+    }
+}
+
+impl CmdExcutor for SubCommand {
+    async fn execute(self) -> Result<()> {
+        match self {
+            SubCommand::Csv(opts) => opts.execute().await,
+            SubCommand::Genpass(opts) => opts.execute().await,
+            SubCommand::Base64(opts) => opts.execute().await,
+            SubCommand::HttpServe(opts) => opts.execute().await,
+            SubCommand::Text(opts) => opts.execute().await,
+        }
     }
 }
 
