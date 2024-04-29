@@ -8,6 +8,7 @@ use axum::{
     Router,
 };
 use tokio::fs;
+use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
 #[derive(Debug)]
@@ -18,12 +19,14 @@ struct HttpServeState {
 pub async fn process_http_serve(path: PathBuf, port: u16) -> Result<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("Serving {:?} on addr {}", path, addr);
-    // 保存命令行传入的初始化参数为服务器的状态
+    let dir_service =
+        ServeDir::new(path.clone()).not_found_service(ServeFile::new("assets/not_found.html"));
     let state = HttpServeState { path };
-    // 生成一个 axum router
+
     let app = Router::new()
         .route("/*path", get(file_handler))
-        .with_state(Arc::new(state));
+        .with_state(Arc::new(state))
+        .nest_service("/tower", dir_service);
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
     Ok(())
@@ -42,5 +45,20 @@ async fn file_handler(
         }
     } else {
         (StatusCode::NOT_FOUND, "Not Found".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_file_handler() {
+        let state = Arc::new(HttpServeState {
+            path: PathBuf::from("."),
+        });
+        let (status, content) = file_handler(State(state), Path("Cargo.toml".to_string())).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(content.trim().starts_with("[package]"));
     }
 }
