@@ -5,27 +5,30 @@ mod http_serve;
 mod text;
 
 use anyhow::Result;
+use enum_dispatch::enum_dispatch;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::CmdExcutor;
-
-pub use self::base64_opts::{Base64Format, Base64Opts, Base64SubCommand};
+pub use self::base64_opts::{Base64Format, Base64Opts};
 pub use self::csv_opts::{CsvOpts, OutputFormat};
 pub use self::genpass_opts::GenpassOpts;
-pub use self::http_serve::{HttpOpts, HttpSubCommand};
-pub use self::text::{TextOpts, TextSignFormat, TextSubCommand};
+pub use self::http_serve::{HttpOpts, HttpServeOpts, HttpSubCommand};
+pub use self::text::{
+    TextDecryptOpts, TextEncryptOpts, TextKeyGenerateOpts, TextOpts, TextSignFormat, TextSignOpts,
+    TextSubCommand, TextVerifyOpts,
+};
 
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[command(name = "rcli", version, about, author, long_about=None)]
+#[command(name = "rcli", version="0.1.0", about="A Rust Command Line Tool", author="Firstero", long_about=None)]
 pub struct Opts {
     #[command(subcommand)]
     pub subcmd: SubCommand,
 }
 
 #[derive(Debug, Parser)]
+#[enum_dispatch(CmdExcutor)]
 pub enum SubCommand {
     // rcli csv --header xx -delimiter , -input /tmp/1.csv -output output.json
     #[command(name = "csv", about = "csv file processor")]
@@ -44,7 +47,6 @@ pub enum SubCommand {
     HttpServe(HttpOpts),
 }
 
-// 模块级别的函数，共享input file的解析逻辑
 pub fn parse_input_file(path: &str) -> Result<String, String> {
     if path == "-" || fs::metadata(path).is_ok() {
         Ok(path.to_string())
@@ -62,19 +64,6 @@ pub fn verify_dir(path: &str) -> Result<PathBuf, &'static str> {
     }
 }
 
-impl CmdExcutor for SubCommand {
-    async fn execute(self) -> Result<()> {
-        match self {
-            SubCommand::Csv(opts) => opts.execute().await,
-            SubCommand::Genpass(opts) => opts.execute().await,
-            SubCommand::Base64(opts) => opts.execute().await,
-            SubCommand::HttpServe(opts) => opts.execute().await,
-            SubCommand::Text(opts) => opts.execute().await,
-        }
-    }
-}
-
-// 单元测试
 #[cfg(test)]
 mod tests {
     use super::*;

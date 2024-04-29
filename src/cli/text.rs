@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, read::DecoderReader, Engine};
 use clap::Parser;
+use enum_dispatch::enum_dispatch;
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 use tokio::fs;
 
@@ -16,6 +17,7 @@ pub struct TextOpts {
 }
 
 #[derive(Debug, Parser)]
+#[enum_dispatch(CmdExcutor)]
 pub enum TextSubCommand {
     #[command(name = "sign", about = "Sign text with private/shared key.")]
     Sign(TextSignOpts),
@@ -141,19 +143,10 @@ impl CmdExcutor for TextVerifyOpts {
 impl CmdExcutor for TextKeyGenerateOpts {
     async fn execute(self) -> Result<()> {
         let keys = process_generate(self.format)?;
-        match self.format {
-            TextSignFormat::Blake3 => {
-                let name = self.output.join("blake3.key");
-                let keys = process_generate(self.format)?;
-                fs::write(name, &keys[0]).await?;
-                Ok(())
-            }
-            TextSignFormat::Ed25519 => {
-                fs::write(self.output.join("ed25519.sk"), &keys[0]).await?;
-                fs::write(self.output.join("ed25519.pk"), &keys[1]).await?;
-                Ok(())
-            }
+        for (k, v) in keys {
+            fs::write(self.output.join(k), &v).await?;
         }
+        Ok(())
     }
 }
 
@@ -182,12 +175,6 @@ impl CmdExcutor for TextDecryptOpts {
 
 impl CmdExcutor for TextOpts {
     async fn execute(self) -> Result<()> {
-        match self.subcmd {
-            TextSubCommand::Sign(opts) => opts.execute().await,
-            TextSubCommand::Verify(opts) => opts.execute().await,
-            TextSubCommand::Generate(opts) => opts.execute().await,
-            TextSubCommand::Encrypt(opts) => opts.execute().await,
-            TextSubCommand::Decrypt(opts) => opts.execute().await,
-        }
+        self.subcmd.execute().await
     }
 }

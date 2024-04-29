@@ -1,4 +1,3 @@
-use crate::process_genpass;
 use crate::TextSignFormat;
 use anyhow::{anyhow, Result};
 use chacha20poly1305::aead::generic_array::GenericArray;
@@ -8,8 +7,8 @@ use chacha20poly1305::{
 };
 use ed25519::signature::{Signer, Verifier};
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
+use std::collections::HashMap;
 use std::io::Read;
-use std::vec;
 trait TextSign {
     fn sign(&self, reader: &mut dyn Read) -> Result<Vec<u8>>;
 }
@@ -19,7 +18,7 @@ trait TextVerify {
 }
 
 trait KeyGenerator {
-    fn generate() -> Result<Vec<Vec<u8>>>;
+    fn generate() -> Result<HashMap<&'static str, Vec<u8>>>;
 }
 
 trait Encrypt {
@@ -60,9 +59,14 @@ impl TextSign for Blake3 {
 }
 
 impl KeyGenerator for Blake3 {
-    fn generate() -> Result<Vec<Vec<u8>>> {
-        let ret = process_genpass(false, false, false, false, 32);
-        Ok(vec![ret])
+    fn generate() -> Result<HashMap<&'static str, Vec<u8>>> {
+        let mut csprng = OsRng;
+        let sk: SigningKey = SigningKey::generate(&mut csprng);
+        let pk: VerifyingKey = (&sk).into();
+        let mut map = HashMap::new();
+        map.insert("ed25519.sk", sk.to_bytes().to_vec());
+        map.insert("ed25519.pk", pk.to_bytes().to_vec());
+        Ok(map)
     }
 }
 
@@ -101,14 +105,14 @@ impl TextSign for Ed25519Signer {
 }
 
 impl KeyGenerator for Ed25519Signer {
-    fn generate() -> Result<Vec<Vec<u8>>> {
+    fn generate() -> Result<HashMap<&'static str, Vec<u8>>> {
         let mut rng = rand::rngs::OsRng;
-        let signing_key = SigningKey::generate(&mut rng);
-        let verifying_key = VerifyingKey::from(&signing_key);
-        Ok(vec![
-            signing_key.as_bytes().to_vec(),
-            verifying_key.as_bytes().to_vec(),
-        ])
+        let sk = SigningKey::generate(&mut rng);
+        let pk = VerifyingKey::from(&sk);
+        let mut map = HashMap::new();
+        map.insert("ed25519.sk", sk.to_bytes().to_vec());
+        map.insert("ed25519.pk", pk.to_bytes().to_vec());
+        Ok(map)
     }
 }
 
@@ -159,10 +163,13 @@ impl ChaCha20Poly1305cryptor {
 }
 
 impl KeyGenerator for ChaCha20Poly1305cryptor {
-    fn generate() -> Result<Vec<Vec<u8>>> {
+    fn generate() -> Result<HashMap<&'static str, Vec<u8>>> {
         let key = ChaCha20Poly1305::generate_key(&mut OsRng);
         let nonce: GenericArray<u8, _> = ChaCha20Poly1305::generate_nonce(&mut OsRng);
-        Ok(vec![key.to_vec(), nonce.to_vec()])
+        let mut map = HashMap::new();
+        map.insert("chacha20poly1305.key", key.to_vec());
+        map.insert("chacha20poly1305.nonce", nonce.to_vec());
+        Ok(map)
     }
 }
 
@@ -214,7 +221,7 @@ pub fn process_verify(
     verifier.verify(reader, sig)
 }
 
-pub fn process_generate(format: TextSignFormat) -> Result<Vec<Vec<u8>>> {
+pub fn process_generate(format: TextSignFormat) -> Result<HashMap<&'static str, Vec<u8>>> {
     match format {
         TextSignFormat::Blake3 => Blake3::generate(),
         TextSignFormat::Ed25519 => Ed25519Signer::generate(),

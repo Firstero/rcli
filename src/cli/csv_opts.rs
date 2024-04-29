@@ -12,7 +12,7 @@ pub struct CsvOpts {
     pub delimiter: char,
     #[arg(short, long, required = true, value_parser=parse_input_file)]
     pub input: String,
-    #[arg(short, long)] // default_value_t = "output.json".into()
+    #[arg(short, long)]
     pub output: Option<String>,
     #[arg(long, default_value = "json", value_parser=OutputFormat::from_str)]
     pub format: OutputFormat,
