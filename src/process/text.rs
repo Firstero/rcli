@@ -128,7 +128,8 @@ impl Ed25519Verifier {
     pub fn try_new(key: impl AsRef<[u8]>) -> Result<Self> {
         let key = key.as_ref();
         VerifyingKey::from_bytes(key.try_into()?)
-            .map_or_else(|_| Err(anyhow!("invalid key")), |key| Ok(Self::new(key)))
+            .map(Self::new)
+            .map_err(|e| e.into())
     }
 }
 
