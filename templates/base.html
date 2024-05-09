@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ title }}{% endblock %}</title>
+
+    <style>
+        body {
+            background-color: #000; /* 黑色背景 */
+            color: #33ff33; /* 默认亮绿色文字 */
+            font-family: 'JetBrainsMono Nerd Font', 'Iosevka Nerd Font', monospace;
+        }
+
+        a {
+            text-decoration: none;
+            color: #88ff88; /* 浅绿色链接 */
+            cursor: pointer;
+        }
+
+        a:hover,
+        a:hover .directory,
+        a:hover .file {
+            color: #ef482c; /* 鼠标悬停时的橙色 */
+        }
+
+        .emoji-icon {
+            color: #ffdd55; /* 图标的黄色 */
+            font-family: 'JetBrainsMono Nerd Font', 'Iosevka Nerd Font';
+        }
+
+        .directory {
+            color: #7FFF00; /* 文件夹的鲜明绿色 */
+        }
+
+        .file {
+            color: #FFFFFF; /* 文件的白色 */
+        }
+
+        #main {
+            width: 60%;
+            max-width: 1600px;
+            margin: 1em auto;
+        }
+
+        footer {
+            display: block;
+            padding: 40px;
+            font-size: 12px;
+            text-align: center;
+            color: #33ff33; /* 底部文字颜色 */
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+
+    <div id="main">
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        Served with <a rel="noopener noreferrer">static-server</a>
+    </footer>
+
+    {% block foot %}{% endblock %}
+
+</body>
+
+</html>
