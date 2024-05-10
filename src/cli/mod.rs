@@ -86,7 +86,7 @@ pub fn parse_duration(s: &str) -> Result<u64, &'static str> {
             "d" => (Duration::from_secs(num as u64 * 60 * 60 * 24)).as_secs(),
             _ => unreachable!(),
         };
-        Ok(timestamp as u64)
+        Ok(timestamp)
     } else {
         Err("invalid duration")
     }
